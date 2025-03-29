@@ -160,3 +160,5 @@ cython_debug/
 #.idea/
 
 dataset/
+assignment1/corpus/
+assignment1/models/
