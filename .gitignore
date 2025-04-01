@@ -162,3 +162,4 @@ cython_debug/
 dataset/
 assignment1/corpus/
 assignment1/models/
+*.docx
