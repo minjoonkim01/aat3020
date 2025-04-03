@@ -160,6 +160,8 @@ cython_debug/
 #.idea/
 
 dataset/
+notebooks/data*/
 assignment1/corpus/
 assignment1/models/
 *.docx
+.DS_store
