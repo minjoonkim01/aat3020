@@ -1,4 +1,4 @@
-import torch
+import torch as th
 from pathlib import Path
 import random
 from torch.utils.data import DataLoader
@@ -124,14 +124,6 @@ class Str2Idx2Str:
       return [self.idx2str[idx] if idx < self.unknown_idx else "UNKOWN" for idx in alist]
     else:
       raise ValueError(f"Invalid input type: {type(alist)}")
-
-# Test the code
-converter = Str2Idx2Str(vocab)
-input_sentence = trainset[0][0][:20] #0th sample, text (instead of label), first 20 words
-print(f"Input sentence: {input_sentence}")
-print(f"Converted sentence: {converter(input_sentence)}")
-print(f"Re-converted sentence: {converter(converter(input_sentence))}")
-print(f"Result for a list of sentences/ input_list: {[trainset[i][0][:5]for i in range(1,5)]}, output_list: {converter([trainset[i][0][:5]for i in range(1,5)])}")
 
 class PackCollateWithConverter:
   def __init__(self, converter: Str2Idx2Str):
