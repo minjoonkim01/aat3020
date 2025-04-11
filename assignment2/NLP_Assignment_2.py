@@ -17,7 +17,7 @@ class IMDbData:
     self.paths = path_list
     self.tokenizer = Tokenizer()
 
-  def __len__(self):
+  def __len__(self) -> int:
     """
     __len__ is a special method that returns length of the instance when called with len(class_instance)
     e.g.
@@ -26,9 +26,9 @@ class IMDbData:
 
     TODO: Complete this function
     """
-    return
+    return len(self.paths)
 
-  def __getitem__(self, idx):
+  def __getitem__(self, idx:int) -> Tuple[List[str], int]:
     """
     __getitem__ is a special method that returns an item for a given index when called with class_instance[index]
     e.g.
@@ -45,12 +45,16 @@ class IMDbData:
 
     TODO: Complete this function using self.paths, self.tokenizer, and read_txt()
     """
-
-    return
+    path = self.paths[idx]
+    label = 1 if 'pos' in str(path) else 0
+    tokens = self.tokenizer(read_txt(path))
+    return tokens, label
 
 class Str2Idx2Str:
-  def __init__(self, vocab):
+  def __init__(self, vocab: List[str]):
     '''
+    Input:
+      vocab: a list of strings, which contains all the words in the vocabulary
     TODO: Complete the class
 
     1. Declare self.idx2str
@@ -63,8 +67,10 @@ class Str2Idx2Str:
     - e.g. self.str2idx[your_word] returns an integer value of the index of your_word in the vocabulary
 
     '''
-    self.idx2str = []
+    self.idx2str = vocab
     self.str2idx = {}
+    for i, s in enumerate(vocab):
+      self.str2idx[s] = i
 
 
     '''
@@ -75,8 +81,7 @@ class Str2Idx2Str:
     self.idx2str.append("UNKNOWN")
 
 
-
-  def __call__(self, alist):
+  def __call__(self, alist:Union[List[str], List[int], str, int, List[List]]) -> Union[List[int], List[str], int, str, List[List]]:
     '''
     This function converts list of word string to its index and vice versa.
     For example, if it takes ['if', 'anyone', 'who', 'loves', 'laurel', 'and', 'hardy', 'can', 'watch', 'this', 'movie', 'and', 'feel', 'good', 'about', 'it', ',', 'you'] as an input,
@@ -111,28 +116,40 @@ class Str2Idx2Str:
     '''
 
     # Write your code from here
+    if isinstance(alist[0], list):
+      return [self.__call__(i) for i in alist]
+    elif isinstance(alist[0], str):
+      return [self.str2idx[word] if word in self.str2idx else self.unknown_idx for word in alist]
+    elif isinstance(alist[0], int):
+      return [self.idx2str[idx] if idx < self.unknown_idx else "UNKOWN" for idx in alist]
+    else:
+      raise ValueError(f"Invalid input type: {type(alist)}")
 
-
-    return
-
+# Test the code
+converter = Str2Idx2Str(vocab)
+input_sentence = trainset[0][0][:20] #0th sample, text (instead of label), first 20 words
+print(f"Input sentence: {input_sentence}")
+print(f"Converted sentence: {converter(input_sentence)}")
+print(f"Re-converted sentence: {converter(converter(input_sentence))}")
+print(f"Result for a list of sentences/ input_list: {[trainset[i][0][:5]for i in range(1,5)]}, output_list: {converter([trainset[i][0][:5]for i in range(1,5)])}")
 
 class PackCollateWithConverter:
-  def __init__(self, converter):
+  def __init__(self, converter: Str2Idx2Str):
     self.converter = converter
 
-  def __call__(self, batch):
+  def __call__(self, batch: List[Tuple[List[str], int]]):
     '''
-    TODO: Declare variables txts_in_idxs and label_tensor, following the description below
+    TODO: Declare variables word_sentences_in_idxs and label_tensor, following the description below
     Use self.converter to convert txts to txts_in_idxs
 
     word_sentences_in_idxs: A list of torch.LongTensor. Each element in a list is a sequence of integer, and the each integer represents a vocabulary index of word in a sentence.
                   i-th element of word_sentences_in_idxs corresponds to the i-th data sample in the batch
-    labels: torch.FloatTensor with a shape of [len(batch)]. i-th value of the tensor represents the label of the i-th data sample in the batch (either 0.0 or 1.0)
+    label_tensor: torch.FloatTensor with a shape of [len(batch)]. i-th value of the tensor represents the label of the i-th data sample in the batch (either 0.0 or 1.0)
     '''
 
     # Write your code from here
-    word_sentences_in_idxs = []
-    label_tensor = torch.FloatTensor([0])
+    word_sentences_in_idxs = [th.LongTensor(self.converter(batch[i][0])) for i in range(len(batch))]
+    label_tensor = th.FloatTensor([batch[i][1] for i in range(len(batch))])
 
 
     '''
@@ -147,8 +164,7 @@ class PackCollateWithConverter:
 
     return packed_sequence, label_tensor
 
-
-def get_binary_cross_entropy_loss(pred, target, eps=1e-8):
+def get_binary_cross_entropy_loss(pred:torch.FloatTensor, target:torch.FloatTensor, eps=1e-8) -> torch.FloatTensor:
   '''
   pred (torch.FloatTensor): Prediction value for N samples
                             Each element in the tensor is the output of torch.sigmoid, and has a value between 0 and 1
@@ -161,7 +177,8 @@ def get_binary_cross_entropy_loss(pred, target, eps=1e-8):
   TODO: Complete this function
 
   '''
-  return
+  return th.mean(-(target * th.log(pred + eps) + (1 - target) * th.log(1 - pred + eps)))
+
 
 
 class Trainer:
@@ -201,9 +218,9 @@ class Trainer:
       print(f"Epoch {epoch+1}, Training Loss: {loss_value:.4f}, Training Acc: {acc:.4f}, Validation Loss: {validation_loss:.4f}, Validation Acc: {validation_acc:.4f}")
       if validation_acc > self.best_valid_accuracy:
         print(f"Saving the model with best validation accuracy: Epoch {epoch+1}, Acc: {validation_acc:.4f} ")
-        self.save_model('imdb_sentiment_model_best_py_test.pt')
+        self.save_model('imdb_sentiment_model_best.pt')
       else:
-        self.save_model('imdb_sentiment_model_last_py_test.pt')
+        self.save_model('imdb_sentiment_model_last.pt')
       self.best_valid_accuracy = max(validation_acc, self.best_valid_accuracy)
 
   def _get_accuracy(self, pred, target, threshold=0.5):
@@ -213,15 +230,16 @@ class Trainer:
     input:
       pred (torch.Tensor): Prediction value for a given batch
       target (torch.Tensor): Target value for a given batch
+      threshold (float): Threshold value for deciding whether the prediction is positive or negative. Default value is 0.5
 
     output:
       accuracy (float): Mean Accuracy value for every sample in a given batch
 
-
-    TODO: Complete this method
+    TODO: Complete this method using all the input arguments
     '''
-
-    return
+    # return value is float
+    pred = (pred > threshold).float()
+    return (pred == target).float().mean().item()
 
   def _get_loss_and_acc_from_single_batch(self, batch):
     '''
@@ -242,8 +260,11 @@ class Trainer:
 
     TODO: Complete this method
     '''
-
-    return
+    batch = (batch[0].to(self.device), batch[1].to(self.device))
+    pred = self.model(batch[0])
+    loss = self.loss_fn(pred, batch[1])
+    acc = self._get_accuracy(pred, batch[1])
+    return loss, acc
 
   def _train_by_single_batch(self, batch):
     '''
@@ -258,13 +279,16 @@ class Trainer:
 
     output:
       loss (float): Mean binary cross entropy value for every sample in the training batch
-      acc (float): Accuracy for the given batch
+      acc (float): Mean accuracy for the given batch
     The model's parameters, optimizer's steps has to be updated inside this method
 
     TODO: Complete this method
     '''
-    return
-
+    loss, acc = self._get_loss_and_acc_from_single_batch(batch)
+    self.optimizer.zero_grad()
+    loss.backward()
+    self.optimizer.step()
+    return loss.item(), acc
 
 
   def validate(self, external_loader=None):
@@ -275,15 +299,16 @@ class Trainer:
     input:
       data_loader: If there is no data_loader given, use self.valid_loader as default.
 
+
     output:
       validation_loss (float): Mean Binary Cross Entropy value for every sample in validation set
       validation_accuracy (float): Mean Accuracy value for every sample in validation set
 
     Use these methods:
-      self._get_loss_from_single_batch (function): function for calculating loss value for a given batch
-      self._get_accuracy (function): function for calculating accuracy for a given batch
+      self._get_loss_and_acc_from_single_batch (function): function for calculating loss value for a given batch
 
     TODO: Complete this method
+    CAUTION: During validation, you can make it faster by not calculating gradient
 
     '''
 
@@ -299,9 +324,14 @@ class Trainer:
     '''
     Write your code from here, using loader, self.model, self.loss_fn.
     '''
-
-    return
-
+    total_loss = 0
+    total_acc = 0
+    with torch.no_grad():
+      for batch in loader:
+        loss, acc = self._get_loss_and_acc_from_single_batch(batch)
+        total_loss += loss.item()
+        total_acc += acc
+    return total_loss / len(loader), total_acc / len(loader)
 
 def main():
   train_path = Path('aclImdb/train')
