@@ -121,7 +121,7 @@ class Str2Idx2Str:
     elif isinstance(alist[0], str):
       return [self.str2idx[word] if word in self.str2idx else self.unknown_idx for word in alist]
     elif isinstance(alist[0], int):
-      return [self.idx2str[idx] if idx < self.unknown_idx else "UNKOWN" for idx in alist]
+      return [self.idx2str[idx] for idx in alist]
     else:
       raise ValueError(f"Invalid input type: {type(alist)}")
 
