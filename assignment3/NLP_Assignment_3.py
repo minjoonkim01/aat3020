@@ -1,6 +1,6 @@
 import torch
+import torch as th
 import torch.nn as nn
-
 
 class MyLSTM(nn.Module):
   def __init__(self, input_size: int, hidden_size: int):
@@ -18,10 +18,16 @@ class MyLSTM(nn.Module):
 
     Implementation Condition: To compare your implementation with the torch's official implementation, please strictly follow the explanation above
     '''
-
-    self.weight_ih = nn.Linear(in_features=, out_features=, bias=True) # TODO: complete this layer by selecting proper in_features and out_features
-    self.weight_hh = nn.Linear(in_features=, out_features=, bias=True) # TODO: complete this layer by selecting proper in_features and out_features
+    # TODO: complete this layer by selecting proper in_features and out_features
+    # ih = W : shape 4h x d, h_i = num batch x nm hidden
+    self.weight_ih = nn.Linear(in_features=input_size, out_features=4*hidden_size, bias=True)
+    # hh = U : shaep 4h x h, x_t = num batch x num input
+    self.weight_hh = nn.Linear(in_features=hidden_size, out_features=4*hidden_size, bias=True) 
     self.hidden_size = hidden_size
+    self.i_idx = slice(0, hidden_size)
+    self.f_idx = slice(hidden_size, hidden_size * 2)
+    self.c_idx = slice(hidden_size * 2, hidden_size * 3)
+    self.o_idx = slice(hidden_size * 3, hidden_size * 4)
 
   def _cal_single_step(self, x_t:torch.Tensor, last_hidden:torch.Tensor, last_cell:torch.Tensor):
     '''
@@ -41,7 +47,15 @@ class MyLSTM(nn.Module):
     assert x_t.shape[0] == last_hidden.shape[0] == last_cell.shape[0], "batch size has to be the same"
 
     # Write your code from here
-
+    ih = self.weight_ih(x_t)
+    hh = self.weight_hh(last_hidden)
+  
+    f_t = torch.sigmoid(ih[...,self.f_idx] + hh[...,self.f_idx])
+    i_t = torch.sigmoid(ih[...,self.i_idx] + hh[...,self.i_idx])
+    o_t = torch.sigmoid(ih[...,self.o_idx] + hh[...,self.o_idx])
+    c_t = torch.tanh(ih[...,self.c_idx] + hh[...,self.c_idx])
+    updated_cell = f_t * last_cell + i_t * c_t
+    updated_hidden = o_t * torch.tanh(updated_cell)
     return updated_hidden, updated_cell
 
   def forward(self, x:torch.Tensor, hidden_and_cell_state:tuple=None):
@@ -74,7 +88,11 @@ class MyLSTM(nn.Module):
     '''
     Write your code from here
     '''
-
+    output = torch.zeros([x.shape[0], x.shape[1], self.hidden_size])
+    for t in range(x.shape[1]):
+      x_t = x[:, t, :]
+      last_hidden, last_cell = self._cal_single_step(x_t, last_hidden, last_cell)
+      output[:, t, :] = last_hidden
     return output, (last_hidden, last_cell)
 
   
