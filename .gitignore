@@ -166,3 +166,6 @@ assignment1/models/
 *.docx
 .DS_store
 assignment2/aclImdb
+
+assignment3/fine_tuned_gpt
+assignment3/results
